@@ -1,0 +1,43 @@
+﻿@page "/bucketlistitem/add"
+@inject HttpClient Http
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<h3>Voeg een item toe</h3>
+<div class ="mb-3 mt-3"></div>
+<label for ="onderwerp">onderwerp:</label>
+<input type ="text" class ="form-control" id="name" placeholder="onderwerp" name="onderwerp" @bind="_aName">
+<div>class ="mb-3">
+	<label for="verduidelijking">Beschrijving:</label>
+	<input type="text" class="form-control" id="pwd" placeholder="verduidelijking" name="verduidelijking" @bind="_aDescription">
+</div>
+<button type="submit" class="btn btn-primary" @onclick="addItemToDB">Voeg toe</button>
+
+
+@code{
+	private string _aName, _aDescription;
+	private async void addItemToDB()
+	{
+		var url = $"bucketlistitem?itemName={Uri.EscapeDataString(_aName)}&itemDescription={Uri.EscapeDataString(_aDescription)}";
+		//POST request, lege bod
+		var response = await Http.PostAsync(url, null);
+
+		if (response.IsSuccessStatusCode)
+		{
+			//Navigeren naar bucketlist pagina bij succes
+			Navigation.NavigateTo("/bucketlistitem");
+		}
+		else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+		{
+			//Item bestaat al
+			await JS.InvokeVoidAsync("alaert", "Dit item bestaat al!");
+		}
+		else
+		{
+			//andere fout
+			await JS.InvokeVoidAsync("alert", " Er trad een onbekende fout op!");
+		}
+	}
+}
+

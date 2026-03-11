@@ -1,0 +1,43 @@
+﻿@page "/login"
+@inject HttpClient Http
+@rendermode InteractiveServer
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<h3>Login</h3>
+
+<div class="mb-3 mt-3">
+    <label for="username">Gebruikersnaam:</label>
+    <input type="text" class="form-control" id="username" placeholder="gebruikersnaam" @bind="_username" />
+</div>
+
+<div class="mb-3">
+    <label for="password">Wachtwoord:</label>
+    <input type="password" class="form-control" id="password" placeholder="wachtwoord" @bind="_password" />
+</div>
+
+<button class="btn btn-primary" @onclick="LoginUser">Log in</button>
+
+@code {
+    private string _username = "";
+    private string _password = "";
+
+    private async Task LoginUser()
+    {
+        var url = $"/users/login?username={Uri.EscapeDataString(_username)}&password={Uri.EscapeDataString(_password)}";
+        var response = await Http.GetAsync(url);
+
+        if (response.IsSuccessStatusCode)
+        {
+            Navigation.NavigateTo("/bucketlistitem"); // kies je eigen pagina
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            await JS.InvokeVoidAsync("alert", "Foute gebruikersnaam of wachtwoord.");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Onbekende fout bij login.");
+        }
+    }
+}
