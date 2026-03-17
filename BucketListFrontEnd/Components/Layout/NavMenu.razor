@@ -1,4 +1,8 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
+﻿@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">BucketListFrontEnd</a>
     </div>
@@ -13,17 +17,57 @@
                 <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
             </NavLink>
         </div>
-
+        
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
+            <NavLink class="nav-link" href="bucketlistitem">
+                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Bucket list items
             </NavLink>
         </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> LoginPage
-            </NavLink>
-        </div>
+        @if (isLoggedIn)
+        {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="mijnlijst">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Personal BucketList
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <button class="nav-link btn btn-link" @onclick="Logout">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Uitloggen (@userName)
+                    </button>
+                </div>
+        }
+        else
+        {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="login">
+                        <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> LoginPage
+                    </NavLink>
+                </div>
+        }
     </nav>
 </div>
 
+@code {
+    private bool isLoggedIn = false;
+    private string userName = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var userId = await JS.InvokeAsync<string>("sessionStorage.getItem", "userId");
+            userName = await JS.InvokeAsync<string>("sessionStorage.getItem", "userName") ?? "";
+            isLoggedIn = !string.IsNullOrEmpty(userId);
+            StateHasChanged();
+        }
+    }
+
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "userId");
+        await JS.InvokeVoidAsync("sessionStorage.removeItem", "userName");
+        isLoggedIn = false;
+        userName = "";
+        Navigation.NavigateTo("/login");
+    }
+}

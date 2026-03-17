@@ -147,4 +147,37 @@ app.MapPost("/bucketlistitem", async (string itemName, string itemDescription, B
 
     return Results.Created($"bucketlistitem", bucketlistitem);
 });
+
+//een user toevoegen 
+app.MapPost("/AddUser", async (string userName, string password, BucketListDbContext db) =>
+{
+    var exists = await db.Users.AnyAsync(pbl => pbl.NameUser == userName);
+
+    if (exists)
+        return Results.Conflict("User already in Database");
+
+    var user = new User
+    {
+        NameUser = userName,
+        PassWordUser = password
+    };
+
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"user", user);
+});
+// DELETE: Verwijder een item uit de globale bucketlistitems tabel
+app.MapDelete("/bucketlistitem/{itemId}", async (int itemId, BucketListDbContext db) =>
+{
+    var item = await db.Bucketlistitems.FindAsync(itemId);
+
+    if (item == null)
+        return Results.NotFound();
+
+    db.Bucketlistitems.Remove(item);
+    await db.SaveChangesAsync();
+
+    return Results.NoContent();
+});
 app.Run();

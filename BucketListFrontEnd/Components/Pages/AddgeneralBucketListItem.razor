@@ -5,39 +5,64 @@
 @inject IJSRuntime JS
 
 <h3>Voeg een item toe</h3>
-<div class ="mb-3 mt-3"></div>
-<label for ="onderwerp">onderwerp:</label>
-<input type ="text" class ="form-control" id="name" placeholder="onderwerp" name="onderwerp" @bind="_aName">
-<div>class ="mb-3">
-	<label for="verduidelijking">Beschrijving:</label>
-	<input type="text" class="form-control" id="pwd" placeholder="verduidelijking" name="verduidelijking" @bind="_aDescription">
+
+<div class="mb-3 mt-3">
+    <label for="onderwerp">Onderwerp:</label>
+    <input type="text" class="form-control" id="name" placeholder="onderwerp" @bind="_aName" />
 </div>
-<button type="submit" class="btn btn-primary" @onclick="addItemToDB">Voeg toe</button>
+<div class="mb-3">
+    <label for="verduidelijking">Beschrijving:</label>
+    <input type="text" class="form-control" id="pwd" placeholder="verduidelijking" @bind="_aDescription" />
+</div>
+<button type="button" class="btn btn-primary" @onclick="addItemToDB">Voeg toe</button>
 
+@code {
+    private string _aName = "";
+    private string _aDescription = "";
 
-@code{  
-	private string _aName, _aDescription;
-	private async void addItemToDB()
-	{
-		var url = $"bucketlistitem?itemName={Uri.EscapeDataString(_aName)}&itemDescription={Uri.EscapeDataString(_aDescription)}";
-		//POST request, lege bod
-		var response = await Http.PostAsync(url, null);
+    private async Task addItemToDB()
+    {
+        // Haal de ingelogde userId op
+        var userIdStr = await JS.InvokeAsync<string>("sessionStorage.getItem", "userId");
+        if (string.IsNullOrEmpty(userIdStr))
+        {
+            Navigation.NavigateTo("/login");
+            return;
+        }
+        var userId = int.Parse(userIdStr);
 
-		if (response.IsSuccessStatusCode)
-		{
-			//Navigeren naar bucketlist pagina bij succes
-			Navigation.NavigateTo("/bucketlistitem");
-		}
-		else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
-		{
-			//Item bestaat al
-			await JS.InvokeVoidAsync("alaert", "Dit item bestaat al!");
-		}
-		else
-		{
-			//andere fout
-			await JS.InvokeVoidAsync("alert", " Er trad een onbekende fout op!");
-		}
-	}
+        // Stap 1: voeg item toe aan globale tabel
+        var url = $"bucketlistitem?itemName={Uri.EscapeDataString(_aName)}&itemDescription={Uri.EscapeDataString(_aDescription)}";
+        var response = await Http.PostAsync(url, null);
+
+        if (response.IsSuccessStatusCode)
+        {
+            // Stap 2: haal het nieuwe item op om het itemId te weten
+            var items = await Http.GetFromJsonAsync<List<BucketListItem>>("bucketlistitems");
+            var newItem = items?.FirstOrDefault(i => i.Name == _aName);
+
+            if (newItem != null)
+            {
+                // Stap 3: koppel het item aan de ingelogde user
+                await Http.PostAsync($"users/{userId}/bucketlist/{newItem.ItemId}", null);
+            }
+
+            Navigation.NavigateTo("/mijnlijst");
+        }
+        else if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+        {
+            await JS.InvokeVoidAsync("alert", "Dit item bestaat al!");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("alert", "Er trad een onbekende fout op!");
+        }
+    }
+
+    public class BucketListItem
+    {
+        public int ItemId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
 }
-
